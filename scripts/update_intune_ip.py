@@ -4,17 +4,13 @@ import ipaddress
 from msal import ConfidentialClientApplication
 
 def main():
+    #Set envs
     tenant_id = os.getenv("GRAPH_TENANT_ID")
     client_id = os.getenv("GRAPH_CLIENT_ID")
     client_secret = os.getenv("GRAPH_CLIENT_SECRET")
-
-    # Replace with your Named Location ID from Intune
     named_location_id = "0282fa9f-d415-42f8-b491-9b88f8419ca6"
 
-    if not all([tenant_id, client_id, client_secret, named_location_id]):
-        raise ValueError("Missing required environment variables.")
-
-    # Acquire a token from Azure AD (MSAL Client-Credentials flow)
+    # Acquire token
     authority_url = f"https://login.microsoftonline.com/{tenant_id}"
     scopes = ["https://graph.microsoft.com/.default"]
     app = ConfidentialClientApplication(
@@ -23,31 +19,34 @@ def main():
         client_credential=client_secret
     )
     token_result = app.acquire_token_for_client(scopes=scopes)
-    if "access_token" not in token_result:
-        raise Exception(f"Token error: {token_result.get('error_description')}")
-
     access_token = token_result["access_token"]
 
-    # Read IPs from the text file and append /32 to each
+    #Parse IPs, if not in CIDR format, add "/32". 
     ip_ranges_list = []
-    try:
-        with open("arc-known-threats.txt", "r") as f:
-            raw_ips = f.read().splitlines()
-        
-        for line in raw_ips:
-            line = line.strip()
-            if line:
-                # Optional: Validate IP correctness
-                ipaddress.ip_address(line)  # raises ValueError if invalid
+    with open("arc-known-threats.txt", "r") as f:
+        raw_ips = f.read().splitlines()
+
+    for line in raw_ips:
+        line = line.strip()
+        if not line:
+            continue
+
+        # If the line already has a slash, treat it as CIDR
+        if "/" in line:
+            try:
+                ipaddress.ip_network(line, strict=False)  # Validate
+                ip_ranges_list.append(line)  # keep as-is
+            except ValueError:
+                print(f"Skipping invalid CIDR notation: {line}")
+        else:
+            # Parse single IP address, then append /32
+            try:
+                ipaddress.ip_address(line)  # Validate single IP
                 ip_ranges_list.append(f"{line}/32")
+            except ValueError:
+                print(f"Skipping invalid IP address: {line}")
 
-    except FileNotFoundError:
-        raise FileNotFoundError("File arc-known-threats.txt not found in the repo.")
-    except ValueError as e:
-        raise ValueError(f"Invalid IP address in the list: {e}")
-
-    # Build the PATCH payload
-    # For each IP string, create a dict with @odata.type and cidrAddress
+    # Build your request body
     ip_ranges_payload = [
         {
             "@odata.type": "#microsoft.graph.iPv4CidrRange",
@@ -55,7 +54,6 @@ def main():
         }
         for cidr in ip_ranges_list
     ]
-
     request_body = {
         "@odata.type": "#microsoft.graph.ipNamedLocation",
         "displayName": "Github Blocklist (arc-known-threats.txt)",
@@ -63,7 +61,7 @@ def main():
         "ipRanges": ip_ranges_payload
     }
 
-    # Send the PATCH request to update the Named Location
+    # Send PATCH request
     url = f"https://graph.microsoft.com/v1.0/identity/conditionalAccess/namedLocations/{named_location_id}"
     headers = {
         "Authorization": f"Bearer {access_token}",
