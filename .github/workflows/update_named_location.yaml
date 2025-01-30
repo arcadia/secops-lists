@@ -6,7 +6,7 @@ on:
   # Triggers the workflow on push events to arc-known-threats.txt
   push:
     paths:
-       - 'secops-lists/arc-known-threats.txt'
+       - 'arc-known-threats.txt'
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
