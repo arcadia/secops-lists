@@ -42,7 +42,7 @@ def main():
                 ip_ranges_list.append(f"{line}/32")
 
     except FileNotFoundError:
-        raise FileNotFoundError("File secops-list/arc-known-threats.txt not found in the repo.")
+        raise FileNotFoundError("File secops-lists/arc-known-threats.txt not found in the repo.")
     except ValueError as e:
         raise ValueError(f"Invalid IP address in the list: {e}")
 
