@@ -31,7 +31,7 @@ def main():
     # Read IPs from the text file and append /32 to each
     ip_ranges_list = []
     try:
-        with open("secops-lists/arc-known-threats.txt", "r") as f:
+        with open("arc-known-threats.txt", "r") as f:
             raw_ips = f.read().splitlines()
         
         for line in raw_ips:
@@ -42,7 +42,7 @@ def main():
                 ip_ranges_list.append(f"{line}/32")
 
     except FileNotFoundError:
-        raise FileNotFoundError("File secops-lists/arc-known-threats.txt not found in the repo.")
+        raise FileNotFoundError("File arc-known-threats.txt not found in the repo.")
     except ValueError as e:
         raise ValueError(f"Invalid IP address in the list: {e}")
 
