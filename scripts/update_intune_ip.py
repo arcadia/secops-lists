@@ -31,7 +31,7 @@ def main():
     # Read IPs from the text file and append /32 to each
     ip_ranges_list = []
     try:
-        with open("secops-list/arc-known-threats.txt", "r") as f:
+        with open("secops-lists/arc-known-threats.txt", "r") as f:
             raw_ips = f.read().splitlines()
         
         for line in raw_ips:
